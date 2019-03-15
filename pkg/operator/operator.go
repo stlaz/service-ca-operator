@@ -1,6 +1,9 @@
 package operator
 
 import (
+	"os"
+
+	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	appsclientv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
@@ -8,6 +11,7 @@ import (
 	rbacclientv1 "k8s.io/client-go/kubernetes/typed/rbac/v1"
 
 	"github.com/openshift/library-go/pkg/operator/events"
+	"github.com/openshift/library-go/pkg/operator/status"
 
 	scsv1 "github.com/openshift/service-ca-operator/pkg/apis/serviceca/v1"
 	"github.com/openshift/service-ca-operator/pkg/boilerplate/operator"
@@ -25,6 +29,7 @@ type serviceCAOperator struct {
 	corev1Client coreclientv1.CoreV1Interface
 	rbacv1Client rbacclientv1.RbacV1Interface
 
+	versionGetter status.VersionGetter
 	eventRecorder events.Recorder
 }
 
@@ -35,6 +40,7 @@ func NewServiceCAOperator(
 	appsv1Client appsclientv1.AppsV1Interface,
 	corev1Client coreclientv1.CoreV1Interface,
 	rbacv1Client rbacclientv1.RbacV1Interface,
+	versionGetter status.VersionGetter,
 	eventRecorder events.Recorder,
 ) operator.Runner {
 	c := &serviceCAOperator{
@@ -91,9 +97,30 @@ func (c serviceCAOperator) Sync(obj metav1.Object) error {
 		// Totally disable the sync loop in these states until we bump deps and replace sscs.
 		return nil
 	}
+
+	operatorConfigCopy := operatorConfig.DeepCopy()
 	// This is to push out deployments but does not handle deployment generation like it used to. It may need tweaking.
-	err := sync_v4_00_to_latest(c, operatorConfig)
-	return err
+	syncErr := sync_v4_00_to_latest(c, operatorConfigCopy)
+	if syncErr != nil {
+		c.setFailingStatus(operatorConfigCopy, "OperatorSyncLoopError", syncErr.Error())
+	} else {
+		// Set current version and available status
+		version := os.Getenv("RELEASE_VERSION")
+		if c.versionGetter.GetVersions()["operator"] != version {
+			c.versionGetter.SetVersion("operator", version)
+		}
+
+		c.setAvailableStatus(operatorConfigCopy)
+	}
+
+	// Update status if it changed
+	if !equality.Semantic.DeepEqual(operatorConfig, operatorConfigCopy) {
+		if _, err := c.operatorConfigClient.ServiceCAs().UpdateStatus(operatorConfigCopy); err != nil {
+			return err
+		}
+	}
+
+	return syncErr
 }
 
 func getGeneration(client appsclientv1.AppsV1Interface, ns, name string) int64 {

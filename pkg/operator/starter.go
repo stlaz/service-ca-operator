@@ -71,6 +71,8 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		Client:    operatorConfigClient.OperatorV1(),
 	}
 
+	versionGetter := status.NewVersionGetter()
+
 	clusterOperatorStatus := status.NewClusterOperatorStatusController(
 		"service-ca",
 		[]configv1.ObjectReference{
@@ -82,7 +84,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		},
 		configClient.ConfigV1(),
 		operatorClient,
-		status.NewVersionGetter(),
+		versionGetter,
 		ctx.EventRecorder,
 	)
 
@@ -107,6 +109,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		kubeClient.AppsV1(),
 		kubeClient.CoreV1(),
 		kubeClient.RbacV1(),
+		versionGetter,
 		ctx.EventRecorder,
 	)
 
