@@ -5,10 +5,10 @@ go 1.14
 require (
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/google/uuid v1.1.1
-	github.com/openshift/api v0.0.0-20200803131051-87466835fcc0
-	github.com/openshift/build-machinery-go v0.0.0-20200731024703-cd7e6e844b55
-	github.com/openshift/client-go v0.0.0-20200729195840-c2b1adc6bed6
-	github.com/openshift/library-go v0.0.0-20200807122248-f5cb4d19a4fe
+	github.com/openshift/api v0.0.0-20200922074107-8c5a4702c21a
+	github.com/openshift/build-machinery-go v0.0.0-20200819073603-48aa266c95f7
+	github.com/openshift/client-go v0.0.0-20200827190008-3062137373b5
+	github.com/openshift/library-go v0.0.0-20200918101923-1e4c94603efe
 	github.com/openshift/operator-boilerplate-legacy v0.0.0-20200817104504-304122b697f3
 	github.com/prometheus/client_golang v1.7.1
 	github.com/prometheus/common v0.10.0
